@@ -133,7 +133,8 @@ def suggest_category_with_llm(file_info: Dict[str, Any]) -> Optional[str]:
         if "candidates" in response_data and len(response_data["candidates"]) > 0:
             if "content" in response_data["candidates"][0]:
                 if "parts" in response_data["candidates"][0]["content"]:
-                    category: str = response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    category: str = response_data["candidates"][0]["content"]["parts"][0]["text"].strip(
+                    )
                     return category.capitalize()  # Ensure category is capitalized
 
         return None
@@ -142,7 +143,7 @@ def suggest_category_with_llm(file_info: Dict[str, Any]) -> Optional[str]:
         return None
 
 
-def rename_files(directory_path: str, rename_files_flag: bool = False) -> None:
+def rename_files(directory_path: str, execute_actions: bool = False) -> None:
     """Process all files in the given directory and move them to a new folder based on LLM suggestions."""
     directory: Path = Path(directory_path)
 
@@ -162,7 +163,8 @@ def rename_files(directory_path: str, rename_files_flag: bool = False) -> None:
             file_info: Dict[str, Any] = get_file_info(str(file_path))
 
             # Get suggestion from LLM
-            suggested_responses: Optional[str] = suggest_name_with_llm(file_info)
+            suggested_responses: Optional[str] = suggest_name_with_llm(
+                file_info)
 
             if suggested_responses:
                 try:
@@ -176,31 +178,41 @@ def rename_files(directory_path: str, rename_files_flag: bool = False) -> None:
                     elif file_info["mime_type"] == "application/pdf":
                         category_folder = "Book"
                     else:
-                        category_folder = suggest_category_with_llm(file_info) or "Uncategorized"
+                        category_folder = suggest_category_with_llm(
+                            file_info) or "Uncategorized"
 
-                    # Create the target folder
-                    target_folder: Path = directory / category_folder / folder_name
-                    target_folder.mkdir(parents=True, exist_ok=True)
+                    if execute_actions:
+                        # Create the target folder
+                        target_folder: Path = directory / category_folder / folder_name
+                        target_folder.mkdir(parents=True, exist_ok=True)
 
-                    # Move and rename the file
-                    new_path: Path = target_folder / file_name
-                    file_path.rename(new_path)
+                        # Move and rename the file
+                        new_path: Path = target_folder / file_name
+                        file_path.rename(new_path)
 
-                    print(f"✓ Moved '{file_path.name}' to folder: '{target_folder}'")
+                        print(
+                            f"✓ Moved '{file_path.name}' to folder: '{target_folder}'")
+                    else:
+                        print(
+                            f"Would move '{file_path.name}' to folder: '{target_folder}'")
+                        print(f"New filename: '{file_name}'")
+                        print(f"Category: '{category_folder}'")
                 except (OSError, json.JSONDecodeError) as e:
-                    print(f"Error processing file '{file_path.name}': {str(e)}")
+                    print(
+                        f"Error processing file '{file_path.name}': {str(e)}")
             else:
-                print(f"Couldn't get a folder name suggestion for: {file_path.name}")
+                print(
+                    f"Couldn't get a folder name suggestion for: {file_path.name}")
 
 
 def main() -> None:
     if len(sys.argv) < 2:
         print(
-            "Usage: python python_renamer.py <directory_path> [--rename-files]")
+            "Usage: python file_sort.py <directory_path> [--execute-actions]")
         sys.exit(1)
     directory_path: str = sys.argv[1]
-    rename_files_flag: bool = any("--rename-files" in arg for arg in sys.argv)
-    rename_files(directory_path, rename_files_flag)
+    execute_actions: bool = any("--execute-actions" in arg for arg in sys.argv)
+    rename_files(directory_path, execute_actions)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,33 @@
+I need a better filename, foldername, and category for this file.
+
+Current filename: {name}
+File extension: {extension}
+MIME type: {mime_type}
+File size: {size_bytes} bytes
+
+{preview}
+
+Please provide the following in a json string output:
+1. "fileName" : "correctFilename.ext", 
+2. "folderName" : "Suggested Folder Name",
+3. "category" : "Suggested Category"
+
+1. Filename
+Please suggest a clear, descriptive filename that follows these rules:
+- Keep the same file extension
+- Use Upper case camel case
+- if extension is PDF, it maybe a book title so use the official book title, and use spaced out words
+- if it's an executable, try to see what software it is, then use that software name
+- Be specific and descriptive about the content
+- Maximum 50 characters (excluding extension)
+- Return ONLY the new filename with no additional text or explanation
+
+2. Foldername
+ - Similar to above, except remove any file extensions for this name
+ - Do not show any versioning
+ - The words have to be separated by space
+ - If it's an application, just have the application, don't need to leave things like 'installer' or 'disk image' or "Mac/Windows" or "Application" etc
+
+3. Category
+ - Suggest a category for the file based on its content, such as "Software", "Book", "Image", "Video", etc.
+ - Provide a single word or short phrase.

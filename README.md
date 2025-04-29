@@ -8,7 +8,7 @@ A Python utility that uses Google's Gemini AI to intelligently organize files by
 - Suggests meaningful filenames and folder organization
 - Categorizes files based on their type and content
 - Preview mode to see suggestions without making changes
-- Execution mode to actually rename and organize files
+- Flexible organization options with separate flags for moving and renaming files
 
 ## Installation
 
@@ -36,18 +36,34 @@ A Python utility that uses Google's Gemini AI to intelligently organize files by
 
 ### Preview Mode (Default)
 
-To see suggested changes without actually moving files:
+To see suggested changes without actually modifying files:
 
 ```
 python file_sort.py /path/to/directory
 ```
 
-### Execution Mode
+### Move Files
 
-To apply the suggested changes and reorganize files:
+To move files to the suggested folders without renaming them:
 
 ```
-python file_sort.py /path/to/directory --execute-actions
+python file_sort.py /path/to/directory --move-files
+```
+
+### Rename Files
+
+To rename files based on suggestions without moving them:
+
+```
+python file_sort.py /path/to/directory --rename-files
+```
+
+### Move and Rename Files
+
+To apply both moving and renaming actions:
+
+```
+python file_sort.py /path/to/directory --move-files --rename-files
 ```
 
 ## How It Works
@@ -74,9 +90,17 @@ Would move 'IMG_20230615_123456.jpg' to folder: 'Photos/Summer Vacation 2023'
 New filename: 'BeachSunset.jpg'
 Category: 'Images'
 
-$ python file_sort.py ~/Downloads --execute-actions
+$ python file_sort.py ~/Downloads --move-files
 Processing file: IMG_20230615_123456.jpg
 ✓ Moved 'IMG_20230615_123456.jpg' to folder: 'Photos/Summer Vacation 2023'
+
+$ python file_sort.py ~/Downloads --rename-files
+Processing file: IMG_20230615_123456.jpg
+✓ Renamed 'IMG_20230615_123456.jpg' to 'BeachSunset.jpg'
+
+$ python file_sort.py ~/Downloads --move-files --rename-files
+Processing file: IMG_20230615_123456.jpg
+✓ Moved and renamed 'IMG_20230615_123456.jpg' to folder: 'Photos/Summer Vacation 2023' as 'BeachSunset.jpg'
 ```
 
 ## License

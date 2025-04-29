@@ -143,8 +143,11 @@ def suggest_category_with_llm(file_info: Dict[str, Any]) -> Optional[str]:
         return None
 
 
-def rename_files(directory_path: str, execute_actions: bool = False) -> None:
-    """Process all files in the given directory and move them to a new folder based on LLM suggestions."""
+def process_and_move_files(directory_path: str, move_files: bool = False, rename_files: bool = False) -> None:
+    """Process all files in the given directory and organize based on flags.
+    --move-files: Create folders and move files (without renaming)
+    --rename-files: Rename files (without moving unless --move-files is also specified)
+    """
     directory: Path = Path(directory_path)
 
     if not directory.exists() or not directory.is_dir():
@@ -154,10 +157,10 @@ def rename_files(directory_path: str, execute_actions: bool = False) -> None:
     for file_path in directory.iterdir():
         if file_path.is_file():
             if any(skip_file_name in file_path.name for skip_file_name in SKIP_FILES):
-                print(f"Skipping file: {file_path.name}")
+                print(f"Skipping file: {str(file_path.absolute())}")
                 continue
 
-            print(f"\nProcessing file: {file_path.name}")
+            print(f"\nProcessing file: {str(file_path.absolute())}")
 
             # Get file information
             file_info: Dict[str, Any] = get_file_info(str(file_path))
@@ -169,50 +172,70 @@ def rename_files(directory_path: str, execute_actions: bool = False) -> None:
             if suggested_responses:
                 try:
                     data = json.loads(suggested_responses)
-                    folder_name = data["folderName"]
                     file_name = data["fileName"]
-
+                    folder_name = data["folderName"]
+                    
                     # Determine category folder based on file type or ask LLM
-                    if file_info["mime_type"].startswith("application/"):
+                    if file_info["mime_type"] and file_info["mime_type"] == "application/pdf":
+                        category_folder = "Books"
+                    elif file_info["mime_type"] and file_info["mime_type"].startswith("application/"):
                         category_folder = "Software"
-                    elif file_info["mime_type"] == "application/pdf":
-                        category_folder = "Book"
                     else:
                         category_folder = suggest_category_with_llm(
                             file_info) or "Uncategorized"
-
-                    if execute_actions:
-                        # Create the target folder
-                        target_folder: Path = directory / category_folder / folder_name
-                        target_folder.mkdir(parents=True, exist_ok=True)
-
-                        # Move and rename the file
-                        new_path: Path = target_folder / file_name
-                        file_path.rename(new_path)
-
-                        print(
-                            f"✓ Moved '{file_path.name}' to folder: '{target_folder}'")
+                    
+                    if move_files or rename_files:
+                        # Determine the target path based on flags
+                        if move_files:
+                            # Create the target folder
+                            target_folder: Path = directory / category_folder / folder_name
+                            target_folder.mkdir(parents=True, exist_ok=True)
+                            
+                            # Determine file name based on whether we're renaming
+                            target_filename = file_name if rename_files else file_path.name
+                            new_path = target_folder / target_filename
+                            file_path.rename(new_path)
+                            
+                            if rename_files:
+                                print(f"✓ Moved and renamed '{str(file_path.absolute())}' to '{new_path}'")
+                            else:
+                                print(f"✓ Moved '{str(file_path.absolute())}' to '{new_path}'")
+                        else:  # Only rename_files is True
+                            new_path = file_path.parent / file_name
+                            file_path.rename(new_path)
+                            print(f"✓ Renamed '{str(file_path.absolute())}' to '{new_path}'")
                     else:
-                        print(
-                            f"Would move '{file_path.name}' to folder: '{target_folder}'")
-                        print(f"New filename: '{file_name}'")
-                        print(f"Category: '{category_folder}'")
+                        # Dry run - just show what would happen
+                        if rename_files and move_files:
+                            print(f"Would move and rename '{str(file_path.absolute())}' to '{directory / category_folder / folder_name / file_name}'")
+                        elif move_files:
+                            print(f"Would move '{str(file_path.absolute())}' to '{directory / category_folder / folder_name / file_path.name}'")
+                        elif rename_files:
+                            print(f"Would rename '{str(file_path.absolute())}' to '{file_path.parent / file_name}'")
+                        else:
+                            print(f"Would process '{str(file_path.absolute())}'")
+                            print(f"Suggested new filename: '{file_name}'")
+                            print(f"Suggested folder: '{folder_name}'")
+                            print(f"Suggested category: '{category_folder}'")
                 except (OSError, json.JSONDecodeError) as e:
-                    print(
-                        f"Error processing file '{file_path.name}': {str(e)}")
+                    print(f"Error processing file '{str(file_path.absolute())}': {str(e)}")
             else:
-                print(
-                    f"Couldn't get a folder name suggestion for: {file_path.name}")
+                print(f"Couldn't get suggestions for: {str(file_path.absolute())}")
 
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print(
-            "Usage: python file_sort.py <directory_path> [--execute-actions]")
+        print("Usage: python file_sort.py <directory_path> [--move-files] [--rename-files]")
+        print("  --move-files: Move files to organized folders (preserves original filenames)")
+        print("  --rename-files: Rename files with better names (keeps files in place unless --move-files is specified)")
         sys.exit(1)
     directory_path: str = sys.argv[1]
-    execute_actions: bool = any("--execute-actions" in arg for arg in sys.argv)
-    rename_files(directory_path, execute_actions)
+    move_files: bool = any("--move-files" in arg for arg in sys.argv)
+    rename_files_flag: bool = any("--rename-files" in arg for arg in sys.argv)
+    
+    print(f"Running with flags: move_files={move_files}, rename_files={rename_files_flag}")
+    
+    process_and_move_files(directory_path, move_files, rename_files_flag)
 
 
 if __name__ == "__main__":
